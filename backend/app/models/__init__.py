@@ -1,0 +1,5 @@
+from app.models.user import User
+from app.models.pothole import Pothole
+from app.models.alert import Alert
+
+__all__ = ["User", "Pothole", "Alert"]
