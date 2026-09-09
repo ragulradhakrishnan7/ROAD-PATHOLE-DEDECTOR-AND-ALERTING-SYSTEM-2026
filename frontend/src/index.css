@@ -49,3 +49,154 @@
 .glow-red {
   box-shadow: 0 0 35px -5px rgba(239, 68, 68, 0.35);
 }
+
+/* ─── Live Location Tracking ─────────────────────────────────────────────── */
+
+/* Pulsing ring on the live user marker */
+@keyframes liveMarkerPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.live-marker-pulse {
+  animation: liveMarkerPulse 2s ease-out infinite;
+}
+
+/* Suppress Leaflet's default icon wrapper styling on custom markers */
+.live-user-location-marker {
+  background: none !important;
+  border: none !important;
+}
+
+.user-location-marker {
+  background: none !important;
+  border: none !important;
+}
+
+/* Live badge subtle glow */
+.live-tracking-badge {
+  box-shadow: 0 0 18px -4px rgba(16, 185, 129, 0.3);
+}
+
+/* ─── Upload Feature Utilities ───────────────────────────────────────────── */
+
+/* Drag-and-drop active highlight */
+@keyframes dropzonePulse {
+  0%, 100% {
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.15);
+  }
+  50% {
+    border-color: rgba(99, 102, 241, 0.9);
+    box-shadow: 0 0 24px 4px rgba(99, 102, 241, 0.2);
+  }
+}
+
+.dropzone-active {
+  animation: dropzonePulse 1.2s ease-in-out infinite;
+  background: rgba(99, 102, 241, 0.04) !important;
+}
+
+.dark .dropzone-active {
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+/* Upload progress bar */
+.upload-progress-bar {
+  background: linear-gradient(90deg, #6366f1 0%, #818cf8 50%, #6366f1 100%);
+  background-size: 200% 100%;
+  animation: progressShine 1.8s ease infinite;
+  transition: width 0.3s ease;
+}
+
+.upload-progress-bar-amber {
+  background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%);
+  background-size: 200% 100%;
+  animation: progressShine 1.8s ease infinite;
+  transition: width 0.3s ease;
+}
+
+@keyframes progressShine {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Shimmer / skeleton loading */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(229, 231, 235, 0.3) 25%,
+    rgba(229, 231, 235, 0.6) 50%,
+    rgba(229, 231, 235, 0.3) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(55, 65, 81, 0.3) 25%,
+    rgba(55, 65, 81, 0.7) 50%,
+    rgba(55, 65, 81, 0.3) 75%
+  );
+  background-size: 800px 100%;
+}
+
+/* Processing pulse */
+@keyframes processingPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.processing-pulse {
+  animation: processingPulse 1.5s ease-in-out infinite;
+}
+
+/* Keyframe thumbnail hover */
+.keyframe-thumb {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.keyframe-thumb:hover {
+  transform: scale(1.03);
+  box-shadow: 0 8px 25px -5px rgba(99, 102, 241, 0.3);
+}
+
+/* Severity bar animation */
+@keyframes barGrow {
+  from { width: 0; }
+}
+
+.severity-bar {
+  animation: barGrow 0.8s ease-out forwards;
+}
+
+/* Alert banner entrance */
+@keyframes alertSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-banner {
+  animation: alertSlideIn 0.4s ease-out;
+}
+

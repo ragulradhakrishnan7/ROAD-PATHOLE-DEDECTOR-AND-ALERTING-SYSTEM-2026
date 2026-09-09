@@ -7,6 +7,12 @@ export interface User {
   created_at: string;
 }
 
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
 export interface BoundingBox {
   x1: number;
   y1: number;
@@ -64,3 +70,27 @@ export interface AdminStats {
     Low: number;
   };
 }
+
+export interface VideoFrameDetection {
+  frame_number: number;
+  timestamp_sec: number;
+  detection_count: number;
+  bounding_boxes: BoundingBox[];
+  annotated_frame_url?: string;
+}
+
+export interface VideoDetectionResult {
+  total_frames_analyzed: number;
+  total_potholes_detected: number;
+  max_severity: string;
+  confidence_avg: number;
+  severity_breakdown: {
+    Critical: number;
+    High: number;
+    Medium: number;
+    Low: number;
+  };
+  frame_detections: VideoFrameDetection[];
+  potholes: Pothole[];
+}
+

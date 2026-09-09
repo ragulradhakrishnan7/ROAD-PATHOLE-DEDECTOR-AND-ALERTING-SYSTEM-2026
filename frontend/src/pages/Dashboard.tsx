@@ -7,10 +7,12 @@ import { StatCard } from '../components/StatCard';
 import { MapComponent } from '../components/MapComponent';
 import { fetchDetectionHistory } from '../services/api';
 import { Pothole } from '../types';
+import { useGeolocation } from '../hooks/useGeolocation';
 
 export const Dashboard: React.FC = () => {
   const [potholes, setPotholes] = useState<Pothole[]>([]);
   const [loading, setLoading] = useState(true);
+  const geo = useGeolocation();
 
   useEffect(() => {
     fetchDetectionHistory().then((data) => {
@@ -139,7 +141,7 @@ export const Dashboard: React.FC = () => {
             </Link>
           </div>
           <div className="flex-1 min-h-[300px]">
-            <MapComponent potholes={potholes} />
+            <MapComponent potholes={potholes} userLocation={!geo.loading && !geo.error ? geo : null} />
           </div>
         </div>
 

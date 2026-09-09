@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Pothole } from '../types';
-import { ShieldAlert, AlertTriangle } from 'lucide-react';
 
 // Fix Leaflet Default Icon Assets in React
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -46,19 +45,106 @@ const createSeverityIcon = (severity: string) => {
   });
 };
 
+// "You Are Here" pulsing blue marker for user's live location
+const createUserLocationIcon = () => {
+  const html = `
+    <div style="position: relative; width: 24px; height: 24px;">
+      <div style="
+        position: absolute;
+        inset: 0;
+        background-color: rgba(59, 130, 246, 0.25);
+        border-radius: 50%;
+        animation: locPulse 2s ease-out infinite;
+      "></div>
+      <div style="
+        position: absolute;
+        top: 4px; left: 4px;
+        width: 16px;
+        height: 16px;
+        background-color: #3b82f6;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
+      "></div>
+    </div>
+    <style>
+      @keyframes locPulse {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(3); opacity: 0; }
+      }
+    </style>
+  `;
+
+  return L.divIcon({
+    html,
+    className: 'user-location-marker',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+};
+
 interface MapComponentProps {
   potholes: Pothole[];
   selectedPotholeId?: string | null;
   onSelectPothole?: (pothole: Pothole) => void;
   center?: [number, number];
   zoom?: number;
+  /** User's live GPS position — shown as a blue "You Are Here" dot */
+  userLocation?: { latitude: number; longitude: number; accuracy: number | null } | null;
 }
 
-const MapRecenter: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
+/**
+ * Auto-fits the map view to show ALL pothole markers + user location.
+ * Computes a LatLngBounds and calls fitBounds with padding.
+ * Falls back to user location or default center when no potholes exist.
+ */
+const FitBounds: React.FC<{
+  potholes: Pothole[];
+  userLocation?: { latitude: number; longitude: number } | null;
+  fallbackCenter: [number, number];
+  fallbackZoom: number;
+}> = ({ potholes, userLocation, fallbackCenter, fallbackZoom }) => {
   const map = useMap();
+  const prevBoundsKey = useRef<string>('');
+
   useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
+    // Collect all points — potholes + user location
+    const points: L.LatLngExpression[] = potholes.map(p => [p.latitude, p.longitude]);
+    if (userLocation && (userLocation.latitude !== 0 || userLocation.longitude !== 0)) {
+      points.push([userLocation.latitude, userLocation.longitude]);
+    }
+
+    if (points.length === 0) {
+      map.setView(fallbackCenter, fallbackZoom);
+      prevBoundsKey.current = '';
+      return;
+    }
+
+    // Build a stable key so we don't re-fit unnecessarily
+    const boundsKey = [
+      ...potholes.map(p => p.id),
+      userLocation ? `user-${userLocation.latitude.toFixed(3)}-${userLocation.longitude.toFixed(3)}` : ''
+    ].sort().join(',');
+
+    if (boundsKey === prevBoundsKey.current) return;
+    prevBoundsKey.current = boundsKey;
+
+    if (points.length === 1) {
+      // Single point — just center on it
+      const [lat, lng] = points[0] as [number, number];
+      map.setView([lat, lng], 15, { animate: true });
+    } else {
+      const bounds = L.latLngBounds(points);
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, {
+          padding: [50, 50],
+          maxZoom: 16,
+          animate: true,
+        });
+      }
+    }
+  }, [potholes, userLocation, fallbackCenter, fallbackZoom, map]);
+
   return null;
 };
 
@@ -66,14 +152,22 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   potholes,
   selectedPotholeId,
   onSelectPothole,
-  center = [37.7749, -122.4194],
-  zoom = 13
+  center = [20, 78], // Default to India center when no location data
+  zoom = 5,
+  userLocation,
 }) => {
+  // If user location is available and there are no potholes, center on user
+  const effectiveCenter: [number, number] =
+    userLocation && (userLocation.latitude !== 0 || userLocation.longitude !== 0)
+      ? [userLocation.latitude, userLocation.longitude]
+      : center;
+  const effectiveZoom = userLocation && (userLocation.latitude !== 0 || userLocation.longitude !== 0) ? 15 : zoom;
+
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden shadow-inner border border-gray-200 dark:border-gray-800 relative">
       <MapContainer
-        center={center}
-        zoom={zoom}
+        center={effectiveCenter}
+        zoom={effectiveZoom}
         scrollWheelZoom={true}
         style={{ width: '100%', height: '100%', minHeight: '400px' }}
       >
@@ -82,8 +176,52 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <MapRecenter center={center} zoom={zoom} />
+        <FitBounds
+          potholes={potholes}
+          userLocation={userLocation}
+          fallbackCenter={effectiveCenter}
+          fallbackZoom={effectiveZoom}
+        />
 
+        {/* User's live location marker */}
+        {userLocation && (userLocation.latitude !== 0 || userLocation.longitude !== 0) && (
+          <>
+            <Marker
+              position={[userLocation.latitude, userLocation.longitude]}
+              icon={createUserLocationIcon()}
+              zIndexOffset={1000}
+            >
+              <Popup>
+                <div className="text-center p-1 text-gray-900">
+                  <p className="font-bold text-sm">📍 You Are Here</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {userLocation.latitude.toFixed(5)}, {userLocation.longitude.toFixed(5)}
+                  </p>
+                  {userLocation.accuracy && (
+                    <p className="text-xs text-gray-400">
+                      Accuracy: ±{Math.round(userLocation.accuracy)}m
+                    </p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+            {/* Accuracy radius circle */}
+            {userLocation.accuracy && userLocation.accuracy < 500 && (
+              <Circle
+                center={[userLocation.latitude, userLocation.longitude]}
+                radius={userLocation.accuracy}
+                pathOptions={{
+                  color: '#3b82f6',
+                  fillColor: '#3b82f6',
+                  fillOpacity: 0.08,
+                  weight: 1,
+                }}
+              />
+            )}
+          </>
+        )}
+
+        {/* Pothole markers */}
         {potholes.map((pothole) => (
           <Marker
             key={pothole.id}

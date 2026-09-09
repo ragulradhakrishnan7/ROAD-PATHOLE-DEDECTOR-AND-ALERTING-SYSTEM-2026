@@ -19,7 +19,7 @@ def test_register_and_login_user():
     )
     assert reg_response.status_code in [201, 400]
 
-    # Login
+    # Login with Email
     login_response = client.post(
         "/api/v1/auth/login",
         json={"email": email, "password": password}
@@ -28,3 +28,13 @@ def test_register_and_login_user():
     data = login_response.json()
     assert "access_token" in data
     assert data["user"]["email"] == email
+
+    # Login with Username
+    username_login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "Test User", "password": password}
+    )
+    assert username_login_response.status_code == 200
+    u_data = username_login_response.json()
+    assert "access_token" in u_data
+    assert u_data["user"]["name"] == "Test User"

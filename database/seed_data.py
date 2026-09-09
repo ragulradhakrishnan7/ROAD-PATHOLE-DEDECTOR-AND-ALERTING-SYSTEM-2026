@@ -1,6 +1,7 @@
 """
 Seed Data Script for Road Pothole Detector System
 Populates initial admin, standard users, sample potholes, and alert notifications.
+Uses diverse global locations for realistic worldwide demo data.
 """
 import uuid
 import datetime
@@ -51,37 +52,65 @@ def seed():
     db.add(demo_user)
     db.commit()
 
-    # Sample Potholes with realistic GPS locations (San Francisco / Major Metro bounds)
+    # Sample Potholes with diverse global GPS locations
     potholes_data = [
+        # India — Major cities
         {
-            "lat": 37.7749, "lng": -122.4194, "location": "Market St & 5th St",
+            "lat": 13.0827, "lng": 80.2707, "location": "Anna Salai, Chennai",
             "confidence": 0.94, "severity": "Critical", "status": "Reported", "area": 1.45,
             "img": "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=800"
         },
         {
-            "lat": 37.7833, "lng": -122.4167, "location": "Geary Blvd & Leavenworth St",
+            "lat": 12.9716, "lng": 77.5946, "location": "MG Road, Bengaluru",
             "confidence": 0.88, "severity": "High", "status": "In Progress", "area": 0.92,
             "img": "https://images.unsplash.com/photo-1584467735871-8e85353a8413?auto=format&fit=crop&q=80&w=800"
         },
         {
-            "lat": 37.7690, "lng": -122.4470, "location": "Haight St & Ashbury St",
+            "lat": 19.0760, "lng": 72.8777, "location": "Western Express Hwy, Mumbai",
             "confidence": 0.76, "severity": "Medium", "status": "Reported", "area": 0.48,
             "img": "https://images.unsplash.com/photo-1596241913254-e0b04ff04f14?auto=format&fit=crop&q=80&w=800"
         },
         {
-            "lat": 37.8024, "lng": -122.4058, "location": "Embarcadero & Bay St",
+            "lat": 28.6139, "lng": 77.2090, "location": "Connaught Place, New Delhi",
             "confidence": 0.91, "severity": "Critical", "status": "Reported", "area": 1.80,
             "img": "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=800"
         },
         {
-            "lat": 37.7510, "lng": -122.4180, "location": "Mission St & 24th St",
+            "lat": 17.3850, "lng": 78.4867, "location": "Hitech City Rd, Hyderabad",
             "confidence": 0.65, "severity": "Low", "status": "Repaired", "area": 0.25,
             "img": "https://images.unsplash.com/photo-1584467735871-8e85353a8413?auto=format&fit=crop&q=80&w=800"
-        }
+        },
+        # Tamil Nadu — Regional roads
+        {
+            "lat": 11.0168, "lng": 76.9558, "location": "Avinashi Road, Coimbatore",
+            "confidence": 0.82, "severity": "High", "status": "Reported", "area": 1.10,
+            "img": "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=800"
+        },
+        {
+            "lat": 9.9252, "lng": 78.1198, "location": "Bypass Road, Madurai",
+            "confidence": 0.73, "severity": "Medium", "status": "In Progress", "area": 0.55,
+            "img": "https://images.unsplash.com/photo-1596241913254-e0b04ff04f14?auto=format&fit=crop&q=80&w=800"
+        },
+        {
+            "lat": 10.7905, "lng": 78.7047, "location": "Salai Road, Tiruchirappalli",
+            "confidence": 0.89, "severity": "Critical", "status": "Reported", "area": 1.65,
+            "img": "https://images.unsplash.com/photo-1584467735871-8e85353a8413?auto=format&fit=crop&q=80&w=800"
+        },
+        # International locations
+        {
+            "lat": 51.5074, "lng": -0.1278, "location": "Oxford Street, London",
+            "confidence": 0.70, "severity": "Medium", "status": "Repaired", "area": 0.40,
+            "img": "https://images.unsplash.com/photo-1596241913254-e0b04ff04f14?auto=format&fit=crop&q=80&w=800"
+        },
+        {
+            "lat": 40.7128, "lng": -74.0060, "location": "Broadway, New York City",
+            "confidence": 0.86, "severity": "High", "status": "Reported", "area": 0.78,
+            "img": "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=800"
+        },
     ]
 
     pothole_objects = []
-    for data in potholes_data:
+    for i, data in enumerate(potholes_data):
         p = Pothole(
             id=str(uuid.uuid4()),
             latitude=data["lat"],
@@ -93,7 +122,7 @@ def seed():
             status=data["status"],
             surface_area_sq_m=data["area"],
             user_id=demo_user.id,
-            timestamp=datetime.datetime.utcnow() - datetime.timedelta(hours=int(data["area"] * 10))
+            timestamp=datetime.datetime.utcnow() - datetime.timedelta(hours=int(data["area"] * 10) + i * 6)
         )
         db.add(p)
         pothole_objects.append(p)
@@ -101,7 +130,7 @@ def seed():
     db.commit()
 
     # Alerts
-    for p in pothole_objects[:3]:
+    for p in pothole_objects[:5]:
         alert = Alert(
             id=str(uuid.uuid4()),
             pothole_id=p.id,
@@ -115,7 +144,7 @@ def seed():
     
     db.commit()
     db.close()
-    print("[Seed] Database successfully seeded with demo users, potholes, and alerts!")
+    print("[Seed] Database successfully seeded with demo users, potholes (10 global locations), and alerts!")
 
 if __name__ == "__main__":
     seed()

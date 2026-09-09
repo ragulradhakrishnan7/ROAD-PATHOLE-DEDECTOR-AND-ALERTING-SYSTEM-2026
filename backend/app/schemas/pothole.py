@@ -44,3 +44,19 @@ class DetectionAnalysisResult(BaseModel):
     annotated_image_url: str
     bounding_boxes: List[BoundingBox]
     potholes: List[PotholeResponse]
+
+class VideoFrameDetection(BaseModel):
+    frame_number: int
+    timestamp_sec: float
+    detection_count: int
+    bounding_boxes: List[BoundingBox]
+    annotated_frame_url: Optional[str] = None
+
+class VideoDetectionResult(BaseModel):
+    total_frames_analyzed: int
+    total_potholes_detected: int
+    max_severity: str
+    confidence_avg: float
+    severity_breakdown: dict
+    frame_detections: List[VideoFrameDetection]
+    potholes: List[PotholeResponse]

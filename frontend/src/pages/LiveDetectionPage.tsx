@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, CameraOff, Volume2, VolumeX, ShieldAlert, MapPin, Play, Square } from 'lucide-react';
 import { Toast } from '../components/Toast';
+import { useGeolocation } from '../hooks/useGeolocation';
 
 export const LiveDetectionPage: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -10,8 +11,8 @@ export const LiveDetectionPage: React.FC = () => {
   const [fps, setFps] = useState(30);
   const [potholeCount, setPotholeCount] = useState(0);
   const [currentSeverity, setCurrentSeverity] = useState<string>('Clear');
-  const [locationName, setLocationName] = useState('Market St & 5th St, San Francisco');
   const [toast, setToast] = useState<any>(null);
+  const geo = useGeolocation();
 
   // Audio synthesize hazard beep
   const playHazardBeep = () => {
@@ -218,7 +219,7 @@ export const LiveDetectionPage: React.FC = () => {
               </div>
               <p className="text-sm font-semibold flex items-center space-x-1">
                 <MapPin className="w-4 h-4 text-rose-400" />
-                <span>{locationName}</span>
+                <span>{geo.loading ? 'Acquiring GPS...' : geo.locationName}</span>
               </p>
             </div>
           )}

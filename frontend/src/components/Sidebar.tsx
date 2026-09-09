@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  LayoutDashboard, Camera, Upload, Video, History, MapPin, ShieldCheck, User, Settings 
+  LayoutDashboard, Camera, Upload, Video, History, MapPin, ShieldCheck, User, Settings, Navigation2 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,6 +14,7 @@ export const Sidebar: React.FC = () => {
     { to: '/upload-image', label: 'Upload Image', icon: Upload },
     { to: '/upload-video', label: 'Upload Video', icon: Video },
     { to: '/map-view', label: 'GIS Hazard Map', icon: MapPin },
+    { to: '/live-location-tracker', label: 'Live Location', icon: Navigation2 },
     { to: '/history', label: 'Detection Logs', icon: History },
   ];
 

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Filter, Layers, Navigation } from 'lucide-react';
+import { MapPin, Navigation, Crosshair, Loader2 } from 'lucide-react';
 import { MapComponent } from '../components/MapComponent';
 import { fetchDetectionHistory } from '../services/api';
 import { Pothole } from '../types';
+import { useGeolocation } from '../hooks/useGeolocation';
 
 export const MapViewPage: React.FC = () => {
   const [potholes, setPotholes] = useState<Pothole[]>([]);
   const [selectedPothole, setSelectedPothole] = useState<Pothole | null>(null);
   const [severityFilter, setSeverityFilter] = useState('All');
+  const geo = useGeolocation();
 
   useEffect(() => {
     fetchDetectionHistory().then(setPotholes);
@@ -27,8 +29,23 @@ export const MapViewPage: React.FC = () => {
             <MapPin className="w-7 h-7 text-rose-500" />
             <span>Interactive GIS Pothole Map</span>
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Real-time geospatial markers, severity clusters, and hazard radius.
+          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center space-x-2">
+            {geo.loading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Acquiring GPS position...</span>
+              </>
+            ) : geo.error ? (
+              <>
+                <Crosshair className="w-3.5 h-3.5 text-amber-500" />
+                <span>GPS unavailable — showing all reported locations</span>
+              </>
+            ) : (
+              <>
+                <Crosshair className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Live GPS: {geo.locationName} ({geo.latitude.toFixed(4)}, {geo.longitude.toFixed(4)})</span>
+              </>
+            )}
           </p>
         </div>
 
@@ -39,7 +56,7 @@ export const MapViewPage: React.FC = () => {
             onChange={(e) => setSeverityFilter(e.target.value)}
             className="bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 outline-none font-bold"
           >
-            <option value="All font-bold">All Hazards ({potholes.length})</option>
+            <option value="All">All Hazards ({potholes.length})</option>
             <option value="Critical">Critical Only</option>
             <option value="High">High Severity</option>
             <option value="Medium">Medium Severity</option>
@@ -56,6 +73,7 @@ export const MapViewPage: React.FC = () => {
           <MapComponent
             potholes={filtered}
             onSelectPothole={(p) => setSelectedPothole(p)}
+            userLocation={!geo.loading && !geo.error ? geo : null}
           />
         </div>
 

@@ -14,18 +14,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('pothole_user');
-    return savedUser ? JSON.parse(savedUser) : {
-      id: 'demo-user-id',
-      name: 'Alex Driver',
-      email: 'alex@example.com',
-      role: 'admin',
-      created_at: new Date().toISOString()
-    };
+    try {
+      const savedUser = localStorage.getItem('pothole_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('pothole_token') || 'demo-jwt-token';
+    return localStorage.getItem('pothole_token') || null;
   });
 
   const login = (newToken: string, newUser: User) => {

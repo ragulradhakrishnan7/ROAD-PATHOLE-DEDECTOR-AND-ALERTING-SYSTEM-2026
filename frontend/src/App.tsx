@@ -15,6 +15,7 @@ import { UploadImagePage } from './pages/UploadImagePage';
 import { UploadVideoPage } from './pages/UploadVideoPage';
 import { DetectionHistoryPage } from './pages/DetectionHistoryPage';
 import { MapViewPage } from './pages/MapViewPage';
+import { LiveLocationPage } from './pages/LiveLocationPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -55,6 +56,7 @@ export const AppContent: React.FC = () => {
       <Route path="/upload-image" element={<MainLayout><UploadImagePage /></MainLayout>} />
       <Route path="/upload-video" element={<MainLayout><UploadVideoPage /></MainLayout>} />
       <Route path="/map-view" element={<MainLayout><MapViewPage /></MainLayout>} />
+      <Route path="/live-location-tracker" element={<MainLayout><LiveLocationPage /></MainLayout>} />
       <Route path="/history" element={<MainLayout><DetectionHistoryPage /></MainLayout>} />
       
       {/* Protected Admin */}
