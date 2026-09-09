@@ -84,25 +84,27 @@ const AutoFollow: React.FC<{
 
   // Detect user-initiated map interactions
   useEffect(() => {
-    const handleMove = () => {
-      // Only flag user interaction when tracking is active
-      if (isTracking) {
+    const handleMove = (e: any) => {
+      // Flag user interaction when user drags/zooms manually
+      if (e?.type === 'dragstart' || e?.type === 'zoomstart' || e?.originalEvent) {
         onUserInteraction();
       }
     };
 
     map.on('dragstart', handleMove);
     map.on('zoomstart', handleMove);
+    map.on('movestart', handleMove);
 
     return () => {
       map.off('dragstart', handleMove);
       map.off('zoomstart', handleMove);
+      map.off('movestart', handleMove);
     };
-  }, [map, isTracking, onUserInteraction]);
+  }, [map, onUserInteraction]);
 
   // Follow user position
   useEffect(() => {
-    if (!isTracking || latitude === 0 && longitude === 0) return;
+    if (!isTracking || (latitude === 0 && longitude === 0)) return;
 
     if (isFirstPosition.current) {
       map.setView([latitude, longitude], 17, { animate: true });
@@ -180,6 +182,8 @@ export const LiveLocationMap: React.FC<LiveLocationMapProps> = ({
       <MapContainer
         center={center}
         zoom={zoom}
+        minZoom={3}
+        maxZoom={19}
         scrollWheelZoom={true}
         zoomControl={false}
         style={{ width: '100%', height: '100%', minHeight: '300px' }}

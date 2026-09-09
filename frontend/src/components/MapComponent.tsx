@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { Crosshair, Maximize2 } from 'lucide-react';
 import { Pothole } from '../types';
 
 // Fix Leaflet Default Icon Assets in React
@@ -94,45 +95,61 @@ interface MapComponentProps {
 }
 
 /**
- * Auto-fits the map view to show ALL pothole markers + user location.
- * Computes a LatLngBounds and calls fitBounds with padding.
- * Falls back to user location or default center when no potholes exist.
+ * Handles initial auto-fit to markers and user location.
+ * Listens for manual drag/zoom interactions to freeze auto-bounds adjustments.
  */
-const FitBounds: React.FC<{
+const FitBoundsHandler: React.FC<{
   potholes: Pothole[];
   userLocation?: { latitude: number; longitude: number } | null;
   fallbackCenter: [number, number];
   fallbackZoom: number;
-}> = ({ potholes, userLocation, fallbackCenter, fallbackZoom }) => {
+  hasUserInteracted: React.MutableRefObject<boolean>;
+  registerRecenter: (recenterFn: () => void) => void;
+  onUserInteraction: () => void;
+}> = ({ potholes, userLocation, fallbackCenter, fallbackZoom, hasUserInteracted, registerRecenter, onUserInteraction }) => {
   const map = useMap();
-  const prevBoundsKey = useRef<string>('');
+  const initialFitDone = useRef(false);
 
+  // Listen for user map drag / zoom gestures to pause auto re-centering
   useEffect(() => {
-    // Collect all points — potholes + user location
+    const handleUserGesture = (e: any) => {
+      // If movement is triggered by mouse/touch interaction (originalEvent exists) or explicit drag/zoom
+      if (e?.type === 'dragstart' || e?.type === 'zoomstart' || e?.originalEvent) {
+        hasUserInteracted.current = true;
+        onUserInteraction();
+      }
+    };
+
+    map.on('dragstart', handleUserGesture);
+    map.on('zoomstart', handleUserGesture);
+    map.on('movestart', handleUserGesture);
+
+    return () => {
+      map.off('dragstart', handleUserGesture);
+      map.off('zoomstart', handleUserGesture);
+      map.off('movestart', handleUserGesture);
+    };
+  }, [map, hasUserInteracted, onUserInteraction]);
+
+  const fitToContent = useCallback((force = false) => {
+    if (!force && hasUserInteracted.current) return;
+
     const points: L.LatLngExpression[] = potholes.map(p => [p.latitude, p.longitude]);
     if (userLocation && (userLocation.latitude !== 0 || userLocation.longitude !== 0)) {
       points.push([userLocation.latitude, userLocation.longitude]);
     }
 
     if (points.length === 0) {
-      map.setView(fallbackCenter, fallbackZoom);
-      prevBoundsKey.current = '';
+      if (!initialFitDone.current || force) {
+        map.setView(fallbackCenter, fallbackZoom);
+        initialFitDone.current = true;
+      }
       return;
     }
 
-    // Build a stable key so we don't re-fit unnecessarily
-    const boundsKey = [
-      ...potholes.map(p => p.id),
-      userLocation ? `user-${userLocation.latitude.toFixed(3)}-${userLocation.longitude.toFixed(3)}` : ''
-    ].sort().join(',');
-
-    if (boundsKey === prevBoundsKey.current) return;
-    prevBoundsKey.current = boundsKey;
-
     if (points.length === 1) {
-      // Single point — just center on it
       const [lat, lng] = points[0] as [number, number];
-      map.setView([lat, lng], 15, { animate: true });
+      map.setView([lat, lng], 14, { animate: true });
     } else {
       const bounds = L.latLngBounds(points);
       if (bounds.isValid()) {
@@ -143,7 +160,23 @@ const FitBounds: React.FC<{
         });
       }
     }
-  }, [potholes, userLocation, fallbackCenter, fallbackZoom, map]);
+    initialFitDone.current = true;
+  }, [potholes, userLocation, fallbackCenter, fallbackZoom, map, hasUserInteracted]);
+
+  // Register re-center callback for parent button
+  useEffect(() => {
+    registerRecenter(() => {
+      hasUserInteracted.current = false;
+      fitToContent(true);
+    });
+  }, [registerRecenter, fitToContent, hasUserInteracted]);
+
+  // Initial fit execution
+  useEffect(() => {
+    if (!initialFitDone.current) {
+      fitToContent(false);
+    }
+  }, [fitToContent]);
 
   return null;
 };
@@ -156,18 +189,39 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   zoom = 5,
   userLocation,
 }) => {
-  // If user location is available and there are no potholes, center on user
+  const hasUserInteracted = useRef(false);
+  const [showRecenterBtn, setShowRecenterBtn] = useState(false);
+  const recenterFnRef = useRef<(() => void) | null>(null);
+
+  const registerRecenter = useCallback((recenterFn: () => void) => {
+    recenterFnRef.current = recenterFn;
+  }, []);
+
+  const handleUserInteraction = useCallback(() => {
+    setShowRecenterBtn(true);
+  }, []);
+
+  const handleRecenterClick = () => {
+    hasUserInteracted.current = false;
+    setShowRecenterBtn(false);
+    if (recenterFnRef.current) {
+      recenterFnRef.current();
+    }
+  };
+
   const effectiveCenter: [number, number] =
     userLocation && (userLocation.latitude !== 0 || userLocation.longitude !== 0)
       ? [userLocation.latitude, userLocation.longitude]
       : center;
-  const effectiveZoom = userLocation && (userLocation.latitude !== 0 || userLocation.longitude !== 0) ? 15 : zoom;
+  const effectiveZoom = userLocation && (userLocation.latitude !== 0 || userLocation.longitude !== 0) ? 14 : zoom;
 
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden shadow-inner border border-gray-200 dark:border-gray-800 relative">
       <MapContainer
         center={effectiveCenter}
         zoom={effectiveZoom}
+        minZoom={3}
+        maxZoom={19}
         scrollWheelZoom={true}
         style={{ width: '100%', height: '100%', minHeight: '400px' }}
       >
@@ -176,11 +230,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <FitBounds
+        <FitBoundsHandler
           potholes={potholes}
           userLocation={userLocation}
           fallbackCenter={effectiveCenter}
           fallbackZoom={effectiveZoom}
+          hasUserInteracted={hasUserInteracted}
+          registerRecenter={registerRecenter}
+          onUserInteraction={handleUserInteraction}
         />
 
         {/* User's live location marker */}
@@ -259,6 +316,25 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           </Marker>
         ))}
       </MapContainer>
+
+      {/* Floating Re-center / Fit Bounds Control Button */}
+      {showRecenterBtn && (
+        <button
+          onClick={handleRecenterClick}
+          id="recenter-map-bounds-button"
+          className="absolute bottom-4 right-4 z-[1000] flex items-center gap-2 px-4 py-2.5 rounded-xl
+            bg-white/95 dark:bg-gray-900/95 backdrop-blur-md
+            text-xs font-bold text-indigo-600 dark:text-indigo-400
+            border border-gray-200 dark:border-gray-700
+            shadow-xl hover:shadow-2xl hover:scale-105
+            transition-all duration-200 cursor-pointer"
+          title="Reset map view to fit all markers & live location"
+        >
+          <Crosshair className="w-4 h-4 text-indigo-500" />
+          <span>Fit View</span>
+        </button>
+      )}
     </div>
   );
 };
+
