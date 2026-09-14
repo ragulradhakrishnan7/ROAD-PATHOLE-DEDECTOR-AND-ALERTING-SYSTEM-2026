@@ -29,7 +29,7 @@ export const MapViewPage: React.FC = () => {
             <MapPin className="w-7 h-7 text-rose-500" />
             <span>Interactive GIS Pothole Map</span>
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center space-x-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center space-x-2 flex-wrap gap-2">
             {geo.loading ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -39,6 +39,13 @@ export const MapViewPage: React.FC = () => {
               <>
                 <Crosshair className="w-3.5 h-3.5 text-amber-500" />
                 <span>GPS unavailable — showing all reported locations</span>
+                <button
+                  type="button"
+                  onClick={geo.requestLocation}
+                  className="ml-1 px-2.5 py-1 rounded-lg bg-emerald-500 text-white text-[11px] font-semibold hover:bg-emerald-600 transition-colors"
+                >
+                  Enable GPS
+                </button>
               </>
             ) : (
               <>

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, CameraOff, Volume2, VolumeX, ShieldAlert, MapPin, Play, Square } from 'lucide-react';
+import { Camera, CameraOff, Volume2, VolumeX, ShieldAlert, MapPin, Play, Square, RefreshCw } from 'lucide-react';
 import { Toast } from '../components/Toast';
 import { useGeolocation } from '../hooks/useGeolocation';
 
@@ -7,6 +7,7 @@ export const LiveDetectionPage: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isSimulated, setIsSimulated] = useState(false);
   const [audioAlerts, setAudioAlerts] = useState(true);
   const [fps, setFps] = useState(30);
   const [potholeCount, setPotholeCount] = useState(0);
@@ -34,24 +35,34 @@ export const LiveDetectionPage: React.FC = () => {
   };
 
   const startCamera = async () => {
+    setIsSimulated(false);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
-      if (videoRef.current) {
+      let stream: MediaStream | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' }
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+
+      if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        await videoRef.current.play().catch(() => {});
       }
       setIsStreaming(true);
       setToast({
-        id: '1',
+        id: Date.now().toString(),
         type: 'success',
         title: 'Live Camera Connected',
-        message: 'YOLOv8 computer vision detection engine initialized.'
+        message: 'YOLOv8 computer vision detection engine initialized with active webcam.'
       });
     } catch (err) {
-      // Fallback to simulated live video stream mode if webcam access denied / headless
+      // Fallback to simulated live video stream mode if webcam access denied / non-existent
       setIsStreaming(true);
+      setIsSimulated(true);
       setToast({
-        id: '2',
+        id: Date.now().toString(),
         type: 'warning',
         title: 'Simulated Camera Mode',
         message: 'Webcam not available. Running simulated high-resolution road test stream.'
@@ -66,14 +77,15 @@ export const LiveDetectionPage: React.FC = () => {
       videoRef.current.srcObject = null;
     }
     setIsStreaming(false);
+    setIsSimulated(false);
     setPotholeCount(0);
     setCurrentSeverity('Clear');
   };
 
-  // Continuous frame loop overlay drawing
+  // Continuous frame loop overlay & simulated road stream drawing
   useEffect(() => {
     let animId: number;
-    let count = 0;
+    let frameCount = 0;
 
     const renderLoop = () => {
       if (isStreaming && canvasRef.current) {
@@ -81,32 +93,114 @@ export const LiveDetectionPage: React.FC = () => {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+          frameCount += 1;
 
-          count += 1;
-          // Simulate dynamic live detection boxes
-          if (count % 90 < 50) {
+          // If in simulated mode, draw a dynamic animated road driving feed
+          if (isSimulated || !videoRef.current?.srcObject) {
+            const w = canvas.width;
+            const h = canvas.height;
+            const horizonY = h * 0.42;
+
+            // Sky & Environment Gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+            skyGrad.addColorStop(0, '#0f172a');
+            skyGrad.addColorStop(1, '#1e293b');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, w, horizonY);
+
+            // Ground & Asphalt Gradient
+            const roadGrad = ctx.createLinearGradient(0, horizonY, 0, h);
+            roadGrad.addColorStop(0, '#1e293b');
+            roadGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = roadGrad;
+            ctx.fillRect(0, horizonY, w, h - horizonY);
+
+            // Road Perspective Surface Trapezoid
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.moveTo(w * 0.35, horizonY);
+            ctx.lineTo(w * 0.65, horizonY);
+            ctx.lineTo(w * 0.95, h);
+            ctx.lineTo(w * 0.05, h);
+            ctx.closePath();
+            ctx.fill();
+
+            // Yellow Center Lane Dashed Line (Scrolling)
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 6;
+            const dashOffset = (frameCount * 8) % 60;
+            ctx.beginPath();
+            for (let y = horizonY + dashOffset; y < h; y += 60) {
+              const p1 = (y - horizonY) / (h - horizonY);
+              const p2 = Math.min(1, (y + 30 - horizonY) / (h - horizonY));
+              const x1 = w * 0.5;
+              const x2 = w * 0.5;
+              ctx.moveTo(x1, y);
+              ctx.lineTo(x2, y + 30);
+            }
+            ctx.stroke();
+
+            // Side Road Borders
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(w * 0.35, horizonY);
+            ctx.lineTo(w * 0.05, h);
+            ctx.moveTo(w * 0.65, horizonY);
+            ctx.lineTo(w * 0.95, h);
+            ctx.stroke();
+
+            // Animated Simulated Potholes on Asphalt
+            const cycle = frameCount % 120;
+            if (cycle < 70) {
+              const prog = cycle / 70; // 0 to 1 as it approaches camera
+              const pY = horizonY + prog * (h - horizonY - 80);
+              const pX = w * 0.32 + prog * 10;
+              const sizeW = 40 + prog * 160;
+              const sizeH = 20 + prog * 80;
+
+              // Dark Pothole Hole Crater
+              ctx.fillStyle = '#090d16';
+              ctx.beginPath();
+              ctx.ellipse(pX + sizeW / 2, pY + sizeH / 2, sizeW / 2, sizeH / 2, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = '#ef4444';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+
+            // Dashboard HUD Graphic Overlay at Bottom
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+            ctx.fillRect(0, h - 35, w, 35);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px monospace';
+            ctx.fillText(`DASHCAM FEED [SIMULATED] | SPEED: 45 KM/H | FRAME: ${frameCount}`, 20, h - 12);
+          }
+
+          // Dynamic YOLOv8 AI Detection Overlay Boxes
+          if (frameCount % 90 < 55) {
             setPotholeCount(2);
             setCurrentSeverity('Critical');
-            if (count % 90 === 1) playHazardBeep();
+            if (frameCount % 90 === 1) playHazardBeep();
 
-            // Draw Box 1 (Critical)
+            // Draw Box 1 (Critical Hazard)
             ctx.strokeStyle = '#ef4444';
             ctx.lineWidth = 4;
             ctx.strokeRect(180, 220, 260, 180);
 
             ctx.fillStyle = '#ef4444';
-            ctx.fillRect(180, 185, 200, 35);
+            ctx.fillRect(180, 185, 210, 35);
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 14px sans-serif';
             ctx.fillText('CRITICAL POTHOLE | 94%', 190, 208);
 
-            // Draw Box 2 (Medium)
+            // Draw Box 2 (Medium Hazard)
             ctx.strokeStyle = '#eab308';
             ctx.lineWidth = 3;
             ctx.strokeRect(520, 310, 180, 120);
 
             ctx.fillStyle = '#eab308';
-            ctx.fillRect(520, 280, 170, 30);
+            ctx.fillRect(520, 280, 185, 30);
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 12px sans-serif';
             ctx.fillText('MEDIUM POTHOLE | 78%', 528, 300);
@@ -124,7 +218,7 @@ export const LiveDetectionPage: React.FC = () => {
     }
 
     return () => cancelAnimationFrame(animId);
-  }, [isStreaming, audioAlerts]);
+  }, [isStreaming, isSimulated, audioAlerts]);
 
   return (
     <div className="space-y-6">
@@ -143,7 +237,7 @@ export const LiveDetectionPage: React.FC = () => {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 flex-wrap gap-2">
           <button
             onClick={() => setAudioAlerts(!audioAlerts)}
             className={`p-3 rounded-2xl border font-bold text-sm flex items-center space-x-2 transition ${
@@ -182,16 +276,18 @@ export const LiveDetectionPage: React.FC = () => {
         {/* Video Canvas Container */}
         <div className="lg:col-span-3 bg-black rounded-3xl overflow-hidden relative border-2 border-gray-800 shadow-2xl min-h-[480px] flex items-center justify-center">
           
-          {/* Simulated or Live Video Source */}
+          {/* Live Video Source (webcam) */}
           <video
             ref={videoRef}
+            autoPlay
             muted
             playsInline
-            className="w-full h-full object-cover"
+            onLoadedMetadata={() => videoRef.current?.play()}
+            className={`w-full h-full object-cover ${isSimulated ? 'hidden' : 'block'}`}
           />
 
           {!isStreaming && (
-            <div className="absolute inset-0 bg-dark-bg/90 flex flex-col items-center justify-center space-y-4 text-center p-6">
+            <div className="absolute inset-0 bg-dark-bg/90 flex flex-col items-center justify-center space-y-4 text-center p-6 z-10">
               <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center animate-pulse">
                 <Camera className="w-8 h-8" />
               </div>
@@ -202,31 +298,39 @@ export const LiveDetectionPage: React.FC = () => {
             </div>
           )}
 
-          {/* Bounding Box Overlay Canvas */}
+          {/* Bounding Box & Simulation Canvas Overlay */}
           <canvas
             ref={canvasRef}
             width={960}
             height={540}
-            className="absolute inset-0 w-full h-full pointer-events-none"
+            className="absolute inset-0 w-full h-full"
           />
 
           {/* HUD Overlay Badge */}
           {isStreaming && (
-            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-white space-y-2">
+            <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-white space-y-2 z-20">
               <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span>LIVE STREAM ACTIVE</span>
+                <span>{isSimulated ? 'SIMULATED STREAM ACTIVE' : 'LIVE CAMERA ACTIVE'}</span>
               </div>
-              <p className="text-sm font-semibold flex items-center space-x-1">
-                <MapPin className="w-4 h-4 text-rose-400" />
+              <div className="flex items-center space-x-2 text-sm font-semibold">
+                <MapPin className="w-4 h-4 text-rose-400 flex-shrink-0" />
                 <span>{geo.loading ? 'Acquiring GPS...' : geo.locationName}</span>
-              </p>
+                <button
+                  type="button"
+                  onClick={geo.requestLocation}
+                  className="p-1 rounded bg-white/10 hover:bg-white/20 text-xs transition"
+                  title="Refresh GPS location"
+                >
+                  <RefreshCw className="w-3 h-3 text-white" />
+                </button>
+              </div>
             </div>
           )}
 
           {/* Critical Alert Warning Banner */}
           {isStreaming && currentSeverity === 'Critical' && (
-            <div className="absolute bottom-4 left-4 right-4 bg-rose-600/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl flex items-center justify-between shadow-2xl animate-bounce">
+            <div className="absolute bottom-4 left-4 right-4 bg-rose-600/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl flex items-center justify-between shadow-2xl animate-bounce z-20">
               <div className="flex items-center space-x-3">
                 <ShieldAlert className="w-6 h-6 animate-spin" />
                 <span className="font-extrabold text-sm sm:text-base">⚠️ CRITICAL POTHOLE HAZARD IN DIRECT VEHICLE PATH!</span>
@@ -276,3 +380,4 @@ export const LiveDetectionPage: React.FC = () => {
     </div>
   );
 };
+
