@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  ShieldAlert, Camera, Upload, Video, MapPin, AlertTriangle, CheckCircle2, Activity, ArrowUpRight 
+  ShieldAlert, Camera, Upload, Video, MapPin, AlertTriangle, CheckCircle2, Activity, ArrowUpRight, Navigation2 
 } from 'lucide-react';
 import { StatCard } from '../components/StatCard';
 import { MapComponent } from '../components/MapComponent';
@@ -34,7 +34,14 @@ export const Dashboard: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-extrabold">Real-Time Pothole Detector Dashboard</h1>
           <p className="text-sm text-gray-300">Live AI telemetry, hazard mapping, and maintenance dispatching.</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/live-location-tracker"
+            className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 flex items-center space-x-2 transition"
+          >
+            <Navigation2 className="w-5 h-5 animate-bounce" />
+            <span>Track Live Location</span>
+          </Link>
           <Link
             to="/live-detection"
             className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/30 flex items-center space-x-2 transition"
@@ -83,10 +90,26 @@ export const Dashboard: React.FC = () => {
         
         {/* Quick Launch Tools */}
         <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-800 rounded-3xl p-6 space-y-4 shadow-sm">
-          <h3 className="font-bold text-lg text-gray-900 dark:text-white">AI Detection Engines</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Select input source to run YOLOv8 model analysis:</p>
+          <h3 className="font-bold text-lg text-gray-900 dark:text-white">AI Detection & Tracking Tools</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Select input source or track GPS vehicle telemetry:</p>
           
           <div className="space-y-3">
+            <Link to="/live-location-tracker" className="flex items-center justify-between p-4 rounded-2xl border border-blue-500/30 bg-blue-500/5 hover:border-blue-500 hover:bg-blue-500/10 transition group">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                  <Navigation2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h4 className="font-bold text-sm">Live Location Tracker</h4>
+                    <span className="text-[9px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">GPS</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Real-time vehicle GPS & hazard proximity alerts</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition" />
+            </Link>
+
             <Link to="/live-detection" className="flex items-center justify-between p-4 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition group">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">

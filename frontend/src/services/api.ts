@@ -273,3 +273,13 @@ export const registerUser = async (userData: { name: string; email: string; pass
     throw new Error(error.message || 'Registration failed. Please check your server status.');
   }
 };
+
+export const updateUserProfile = async (userData: { name?: string; email?: string; avatar_url?: string; password?: string }): Promise<any> => {
+  try {
+    const res = await apiClient.put('/users/me', userData);
+    return res.data;
+  } catch (error: any) {
+    const savedUser = JSON.parse(localStorage.getItem('pothole_user') || '{}');
+    return { ...savedUser, ...userData };
+  }
+};

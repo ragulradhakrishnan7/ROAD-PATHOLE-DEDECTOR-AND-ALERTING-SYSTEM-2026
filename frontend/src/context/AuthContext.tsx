@@ -6,6 +6,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (updatedFields: Partial<User>) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
 }
@@ -40,12 +41,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('pothole_user');
   };
 
+  const updateUser = (updatedFields: Partial<User>) => {
+    setUser((prevUser) => {
+      if (!prevUser) return null;
+      const updated = { ...prevUser, ...updatedFields };
+      localStorage.setItem('pothole_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
       token,
       login,
       logout,
+      updateUser,
       isAuthenticated: !!token,
       isAdmin: user?.role === 'admin'
     }}>
